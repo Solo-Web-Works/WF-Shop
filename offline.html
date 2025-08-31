@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Offline — Warframe Shopping List</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .offline-wrap {
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+    }
+    .offline-card {
+      max-width: 34rem;
+      border: 1px solid #333;
+      border-radius: .75rem;
+      padding: 1.25rem;
+    }
+    .offline-actions { display: flex; gap: .5rem; margin-top: .75rem; }
+    .button { cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="offline-wrap">
+    <div class="offline-card">
+      <h1>You're offline</h1>
+      <p>If you recently visited, your lists and items may still be available. Some actions (like fetching fresh prices) require a connection.</p>
+      <div class="offline-actions">
+        <button class="button" onclick="location.reload()">Try again</button>
+        <a class="button" href="/">Go to app</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

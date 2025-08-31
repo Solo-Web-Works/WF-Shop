@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0">
+
+    <title>Warframe Shopping List</title>
+
+    <!-- PWA/Icons -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#005f73">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="shortcut icon" href="/favicon.svg"> <!-- optional -->
+
+    <!-- Raleway font from Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/utilities.css">
+    <link rel="stylesheet" href="css/media-queries.css">
+    <link rel="stylesheet" href="css/dark-mode.css">
+</head>
+
+<body>
+    <div class="container">
+        <button class="btnMode" id="darkModeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">🌙</button>
+
+        <header>
+            <h1>Warframe Shopping List</h1>
+
+            <div id="user-auth-area">
+                <!-- User authentication UI will be rendered here by JS -->
+            </div>
+
+        </header>
+
+        <div class="mobile-tabs" id="mobile-tabs">
+            <button id="tab-items" class="tab-btn">Items</button>
+            <button id="tab-lists" class="tab-btn active">Lists</button>
+        </div>
+
+        <div class="main-content">
+            <!-- Item Search Container -->
+            <div class="item-catalog" id="item-catalog-panel">
+                <h2>Item Catalog</h2>
+
+                <div class="filter-bar">
+                    <small id="search-kbd-hint" class="kbd-hint" aria-hidden="true">Press / to focus, Esc to clear</small>
+                    <div class="search-filter">
+                        <input type="text" id="globalSearch" placeholder="Search for items..." aria-describedby="search-kbd-hint" title="Press / to focus, Esc to clear">
+
+                        <select aria-label="Category filter" id="category-filter">
+                            <option value="">All Categories</option>
+                        </select>
+
+                        <button class="button" id="clearSearch" style="display:none" aria-label="Clear search" title="Clear search (Esc)">Clear</button>
+                    </div>
+                </div>
+
+                <ul id="item-list"></ul>
+            </div>
+
+            <!-- Shopping Lists Container -->
+            <div class="shopping-lists" id="shopping-lists-panel">
+                <h2>Shopping List <span id="active-list-name"></span></h2>
+
+                <div class="create-list">
+                    <input type="text" id="new-list-name" placeholder="New list name...">
+
+                    <div class="action-buttons">
+                        <button class="button" id="create-list-btn">Create List</button>
+                        <button class="button" id="clear-list-btn">Clear List</button>
+                        <button class="button danger" id="delete-list-btn">Delete List</button>
+                    </div>
+                </div>
+
+                <ul id="shopping-list-tabs"></ul>
+
+                <div class="list-switcher" id="list-switcher" hidden>
+                    <label for="list-select"><strong>Active list</strong></label>
+                    <select id="list-select" aria-label="Active list"></select>
+                </div>
+
+                <div class="list-sticky-bar" aria-live="polite">
+                    <div class="list-sticky-summary">
+                        <div id="total-cost" class="total"></div>
+                        <span id="price-warning" class="muted"></span>
+                    </div>
+
+                    <div class="list-sticky-cta">
+                        <button class="button" id="check-prices-btn">Check Prices</button>
+                    </div>
+                </div>
+
+                <div class="shopping-list">
+                    <div id="shopping-list-content"></div>
+                </div>
+
+                <div id="prices-summary">
+                    <div id="prices-head">
+                        <h3>Prices</h3>
+
+                        <div class="sort-control">
+                            <label for="prices-group-mode">Group prices by: </label>
+                            <select id="prices-group-mode">
+                                <option value="seller">Seller</option>
+                                <option value="item">Item</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="prices-breakdown"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New List Name Dialog -->
+    <dialog id="new-list-dialog" aria-labelledby="new-list-title">
+        <form id="new-list-form" method="dialog" class="new-list-form">
+            <h3 id="new-list-title">Create new list</h3>
+
+            <label for="new-list-name-modal" class="visually-hidden">List name</label>
+            <input id="new-list-name-modal" type="text" placeholder="List name…" required>
+
+            <div class="dialog-actions">
+                <button type="button" class="button ghost" id="new-list-cancel">Cancel</button>
+                <button type="submit" class="button">Create</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="js/app.js"></script>
+
+    <script>
+        (function() {
+            function syncActiveListName() {
+                const tabs = document.getElementById('shopping-list-tabs');
+                const nameEl = document.getElementById('active-list-name');
+
+                if (!tabs || !nameEl) return;
+
+                const active = tabs.querySelector('li.active');
+
+                if (active) nameEl.textContent = '- ' + active.textContent.trim();
+            }
+
+            function syncItemListHeight() {
+                const shoppingListsPanel = document.getElementById('shopping-lists-panel');
+                const itemList = document.getElementById('item-list');
+
+                if (!shoppingListsPanel || !itemList) return;
+
+                const panelHeight = shoppingListsPanel.offsetHeight;
+
+                itemList.style.maxHeight = panelHeight + 'px';
+            }
+
+            const THRESHOLD = 4; // show switcher when there are 4 or more lists
+
+            function buildSwitcher() {
+                const tabs = document.getElementById('shopping-list-tabs');
+                const sw = document.getElementById('list-switcher');
+                const sel = document.getElementById('list-select');
+
+                if (!tabs || !sw || !sel) return;
+
+                const lis = Array.from(tabs.querySelectorAll('li'));
+
+                // Populate options
+                sel.innerHTML = lis.map(li => {
+                    const label = li.textContent.trim();
+                    const selected = li.classList.contains('active') ? 'selected' : '';
+                    return `<option ${selected}>${label}</option>`;
+                }).join('');
+
+                // Decide visibility for non-mobile contexts too
+                sw.hidden = (lis.length < THRESHOLD) && window.matchMedia('(max-width: 50rem)').matches ? true : false;
+            }
+
+            function wireSwitcher() {
+                const tabs = document.getElementById('shopping-list-tabs');
+                const sel = document.getElementById('list-select');
+
+                if (!tabs || !sel) return;
+
+                // Change active list when select changes
+                sel.addEventListener('change', () => {
+                    const target = Array.from(tabs.querySelectorAll('li'))
+                    .find(li => li.textContent.trim() === sel.value);
+
+                    if (target) target.click(); // reuse existing tab logic
+                });
+            }
+
+            function syncSwitcherToActive() {
+                const sel = document.getElementById('list-select');
+                const active = document.querySelector('#shopping-list-tabs li.active');
+
+                if (sel && active) sel.value = active.textContent.trim();
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                syncActiveListName();
+                syncItemListHeight();
+                buildSwitcher();
+                wireSwitcher();
+
+                // Observe tab changes to keep name current
+                const tabs = document.getElementById('shopping-list-tabs');
+
+                if (tabs) {
+                    const obsTabs = new MutationObserver(syncActiveListName);
+                    obsTabs.observe(tabs, { attributes: true, childList: true, subtree: true });
+                }
+
+                window.addEventListener('resize', syncItemListHeight);
+
+                const shoppingListsPanel = document.getElementById('shopping-lists-panel');
+
+                if (shoppingListsPanel) {
+                    const observer = new MutationObserver(syncItemListHeight);
+                    observer.observe(shoppingListsPanel, { childList: true, subtree: true });
+                }
+
+                // Keep in sync when lists are added/removed/renamed or active tab changes
+                if (tabs) {
+                    const obs = new MutationObserver(() => {
+                        buildSwitcher();
+                        syncSwitcherToActive();
+                    });
+
+                    obs.observe(tabs, { attributes: true, childList: true, subtree: true });
+                }
+            });
+        })();
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/wf-list/sw.js').catch(console.error);
+            });
+        }
+
+        (() => {
+            const dlg = document.getElementById('new-list-dialog');
+            const btn = document.getElementById('create-list-btn');
+            const modalInput = document.getElementById('new-list-name-modal');
+            const hiddenInput = document.getElementById('new-list-name'); // existing input
+
+            if (!dlg || !btn || !modalInput || !hiddenInput) return;
+
+            // Intercept normal create button clicks to open dialog
+            btn.addEventListener('click', (e) => {
+                // allow bypass clicks (we set this flag when we want legacy handler)
+                if (btn.dataset.bypassDialog === '1') return;
+                e.preventDefault();
+                modalInput.value = '';
+                dlg.showModal();
+                modalInput.focus();
+            });
+
+            // Cancel
+            document.getElementById('new-list-cancel')?.addEventListener('click', () => dlg.close());
+
+            // Submit dialog -> feed legacy flow
+            document.getElementById('new-list-form')?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = modalInput.value.trim();
+                if (!name) { modalInput.focus(); return; }
+                // Put name where your existing app expects it:
+                hiddenInput.value = name;
+
+                // Trigger your existing create-list JS by "bypassing" our dialog intercept
+                btn.dataset.bypassDialog = '1';
+                btn.click();
+                delete btn.dataset.bypassDialog;
+
+                dlg.close();
+            });
+
+            // Escape closes dialog (native), but ensure focus returns sensibly
+            dlg.addEventListener('close', () => btn.focus());
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+/* Dark Mode Styles */
+body.dark-mode {
+    --colorBG: #1e1e1e;
+    --colorPrimary: #3291a5;
+    --colorPrimaryHover: #29aea4;
+    --colorPrimaryDark: #0d363e;
+    --colorPrimaryDarker: #072227;
+    --colorPrimaryButton: #228195;
+    --colorWarning: #df5955;
+    --colorDarkGray: #222;
+    --colorMedGray: #666;
+    --colorLightGray: #999;
+
+    background-color: #121212;
+    color: var(--colorWhite);
+
+    h1, h2, h3, h4, #total-cost { color: var(--colorWhite); }
+
+    header, footer {
+        background-color: var(--colorBG);
+        border-color: var(--colorDarkGray);
+    }
+
+    .button {
+        background-color: var(--colorPrimaryButton);
+        color: var(--colorWhite);
+    }
+
+    .btnMode { color: var(--colorWhite); }
+
+    .mobile-tabs {
+        background: var(--colorBG);
+        border-bottom: 1px solid var(--colorWhite);
+        border-left: 1px solid var(--colorBG);
+        border-right: 1px solid var(--colorBG);
+    }
+
+    .mobile-tabs .tab-btn.active { box-shadow: 0 2px 0 0 var(--colorPrimary) inset; }
+
+    .card, .container, .panel {
+        background-color: var(--colorBG);
+        border-color: var(--colorDarkGray);
+    }
+
+    .item-catalog, .shopping-lists, #item-list li, #shopping-list-content ul li, .list-sticky-bar,
+    #globalSearch, #category-filter, #new-list-name, #shopping-list-tabs {
+        border-color: var(--colorWhite);
+
+        li.active { background: var(--colorPrimaryButton); }
+
+        .stripe {
+            background-color: var(--colorPrimaryDarker);
+            border-color: var(--colorPrimary);
+            color: var(--colorLightGray);
+
+            a {
+                color: var(--colorPrimary);
+                &:hover { color: var(--colorPrimaryHover); }
+            }
+        }
+    }
+
+    #list-select {
+        background: var(--colorWhite);
+        border: 1px solid var(--colorWhite);
+        color: var(--colorDarkGray);
+    }
+
+    #prices-summary {
+        #prices-head { border-color: var(--colorWhite); }
+
+
+        #prices-breakdown {
+            .price-card, ul {
+                border-color: var(--colorWhite);
+
+                li { border-color: var(--colorMedGray); }
+            }
+        }
+    }
+
+    .item-catalog .filter-bar, .list-sticky-bar {
+        background: var(--colorBG);
+
+        .list-sticky-summary {
+            #total-cost { color: var(--colorWhite); }
+            #price-warning { color: var(--colorWarning); }
+        }
+    }
+
+    #new-list-dialog {
+        background: var(--colorBG);
+        color: var(--colorWhite);
+
+        h3 { color: var(--colorWhite); }
+    }
+
+    #item-list .empty-hint, .kbd-hint { color: var(--colorWhite); }
+
+    .loading { color: var(--colorWhite); }
+}
