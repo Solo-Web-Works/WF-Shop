@@ -1,5 +1,5 @@
 /* Service Worker for Warframe Shopping List */
-const VERSION = 'v1.0.4';
+const VERSION = 'v1.0.5';
 const STATIC_CACHE = `wf-static-${VERSION}`;
 const RUNTIME_CACHE = `wf-runtime-${VERSION}`;
 

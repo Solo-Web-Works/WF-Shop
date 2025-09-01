@@ -388,6 +388,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let items = [];
     let shoppingLists = [];
     let activeListId = null;
+    // Track which item slugs are in the active list to disable duplicate adds
+    let activeListSlugs = new Set();
 
     // Cookie helpers
     function setCookie(name, value, days = 30) {
@@ -419,8 +421,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Render items
     function renderItems() {
-        // TODO: Add hover/tap tooltips with item details (from warframestat.us API)
-
         // UX: Search-only UI gates results until the user types ≥ 2 characters.
         // This avoids rendering the full catalog by default and encourages targeted queries.
         const q = (searchInput?.value || '').trim();
@@ -461,7 +461,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             addButton.textContent = 'Add';
             addButton.classList.add('button');
-            addButton.onclick = () => addToShoppingList(item.id);
+            const alreadyInList = activeListSlugs && activeListSlugs.has(item.slug);
+            if (alreadyInList) {
+                addButton.disabled = true;
+                addButton.classList.add('added');
+                addButton.textContent = 'Added';
+                addButton.title = `${item.name} is already in the active list`;
+                addButton.setAttribute('aria-label', `${item.name} is already in the active list`);
+            } else {
+                addButton.onclick = () => addToShoppingList(item.id);
+                addButton.title = `Add ${item.name} to active list`;
+                addButton.setAttribute('aria-label', `Add ${item.name} to active list`);
+            }
 
             li.appendChild(addButton);
 
@@ -521,26 +532,84 @@ document.addEventListener('DOMContentLoaded', () => {
     // Render shopping list tabs
     function renderShoppingListTabs() {
         const savedId = getCookie('activeListId');
+        const selectedId = (activeListId != null) ? activeListId : savedId;
 
+        if (shoppingListTabs) shoppingListTabs.setAttribute('role', 'tablist');
         shoppingListTabs.innerHTML = '';
 
+        const activate = (li, id) => {
+            activeListId = id;
+            setCookie('activeListId', activeListId);
+            renderShoppingListContent();
+            // Update visual and ARIA selection state
+            const tabsAll = shoppingListTabs.querySelectorAll('li[role="tab"]');
+            tabsAll.forEach(tab => {
+                tab.classList.remove('active');
+                tab.setAttribute('aria-selected', 'false');
+                tab.tabIndex = -1;
+            });
+            li.classList.add('active');
+            li.setAttribute('aria-selected', 'true');
+            li.tabIndex = 0;
+            li.focus();
+        };
+
+        // Build tabs
         shoppingLists.forEach(list => {
             const li = document.createElement('li');
 
+            li.setAttribute('role', 'tab');
+            li.setAttribute('aria-controls', 'shopping-list-content');
+            li.setAttribute('aria-selected', String(list.id == selectedId));
+            li.tabIndex = (list.id == selectedId) ? 0 : -1; // roving tabindex
             li.textContent = list.name;
             li.dataset.id = list.id;
 
-            if (list.id == savedId) {
+            if (list.id == selectedId) {
                 li.classList.add('active');
             }
 
-            li.onclick = () => {
-                activeListId = list.id;
-                setCookie('activeListId', activeListId);
-                renderShoppingListContent();
-                document.querySelectorAll('#shopping-list-tabs li').forEach(tab => tab.classList.remove('active'));
-                li.classList.add('active');
-            };
+            li.addEventListener('click', () => activate(li, list.id));
+            li.addEventListener('keydown', (e) => {
+                const tabs = Array.from(shoppingListTabs.querySelectorAll('li[role="tab"]'));
+                const currentIndex = tabs.indexOf(li);
+                let nextIndex = currentIndex;
+
+                switch (e.key) {
+                    case 'Enter':
+                    case ' ': // Space
+                    case 'Spacebar':
+                        e.preventDefault();
+                        activate(li, list.id);
+                        return;
+                    case 'ArrowRight':
+                    case 'Right':
+                        e.preventDefault();
+                        nextIndex = (currentIndex + 1) % tabs.length;
+                        break;
+                    case 'ArrowLeft':
+                    case 'Left':
+                        e.preventDefault();
+                        nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+                        break;
+                    case 'Home':
+                        e.preventDefault();
+                        nextIndex = 0;
+                        break;
+                    case 'End':
+                        e.preventDefault();
+                        nextIndex = tabs.length - 1;
+                        break;
+                    default:
+                        return; // do nothing for other keys
+                }
+
+                // Move focus only (do not activate)
+                tabs.forEach(tab => tab.tabIndex = -1);
+                const next = tabs[nextIndex];
+                next.tabIndex = 0;
+                next.focus();
+            });
 
             shoppingListTabs.appendChild(li);
         });
@@ -551,6 +620,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!activeListId) {
             shoppingListContent.innerHTML = '';
             updatePriceWarning();
+            // No active list -> allow all adds
+            activeListSlugs = new Set();
+            // Refresh item list to update disabled state
+            renderItems();
             return;
         }
 
@@ -563,6 +636,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Fetch list items
         const response = await fetch(`api/get-list-items.php?list_id=${activeListId}`);
         const listItems = (await response.json()).sort((a, b) => a.name.localeCompare(b.name));
+        // Update the set of slugs present in the active list
+        activeListSlugs = new Set(listItems.map(i => i.slug).filter(Boolean));
 
         // Fetch cached price/order data for all items and show price breakdown
         let lastChecked = null;
@@ -676,6 +751,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const removeButton = document.createElement('button');
             removeButton.textContent = 'Remove';
+            removeButton.setAttribute('aria-label', `Remove ${item.name} from shopping list`);
+            removeButton.setAttribute('title', `Remove ${item.name} from shopping list`);
             removeButton.classList.add('button');
             removeButton.onclick = () => removeFromShoppingList(item.id);
             li.appendChild(removeButton);
@@ -694,6 +771,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 clearListBtn.style.display = 'none';
             }
         }
+        // Refresh item catalog to reflect disabled Add buttons
+        renderItems();
     }
 
 
@@ -863,6 +942,9 @@ document.addEventListener('DOMContentLoaded', () => {
             totalCostDiv.textContent = `Total Cost: ${totalCost} Platinum`;
         }
 
+        // Add interaction hint
+        html += '<div class="kbd-hint">Tip: Tap the copy icon to copy a whisper for that seller and item.</div>';
+
         if (pricesGroupMode === 'seller') {
             // Group by seller: show only the best seller for each item, grouped by seller (no seller quantity shown)
             const sellers = {};
@@ -884,7 +966,8 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const seller in sellers) {
                 html += `<h4>${seller}</h4><ul>`;
                 sellers[seller].forEach(item => {
-                    html += `<li>${item.name}: ${item.price} Platinum</li>`;
+                    const aria = `Copy whisper for ${seller} about ${item.name}`;
+                    html += `<li><span class="line-left">${item.name}: ${item.price} Platinum</span><button class="seller-copy copy-icon" data-seller="${seller}" data-item="${item.name}" title="${aria}" aria-label="${aria}">📋</button></li>`;
                 });
                 html += '</ul>';
             }
@@ -915,7 +998,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     // Output sellers in order of appearance in sellOrders
                     Object.keys(sellerMap).forEach(seller => {
-                        html += `<li>${seller} (x${sellerMap[seller].quantity}): ${sellerMap[seller].price} Platinum</li>`;
+                        const aria = `Copy whisper for ${seller} about ${item.name}`;
+                        html += `<li><span class="line-left">${seller} (x${sellerMap[seller].quantity}): ${sellerMap[seller].price} Platinum</span><button class="seller-copy copy-icon" data-seller="${seller}" data-item="${item.name}" title="${aria}" aria-label="${aria}">📋</button></li>`;
                     });
                 } else {
                     html += `<li>No sellers found</li>`;
@@ -927,6 +1011,42 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pricesBreakdown) {
             pricesBreakdown.innerHTML = html;
         }
+    }
+
+    // Whisper copy handler for seller buttons
+    if (pricesBreakdown) {
+        pricesBreakdown.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.seller-copy');
+            if (!btn) return;
+            const seller = btn.getAttribute('data-seller');
+            const itemName = btn.getAttribute('data-item');
+            if (!seller || !itemName) return;
+            const msg = `/w ${seller} I'm interested in your ${itemName}. Is it still available?`;
+
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(msg);
+                } else {
+                    // Fallback for older browsers
+                    const ta = document.createElement('textarea');
+                    ta.value = msg;
+                    ta.style.position = 'fixed';
+                    ta.style.left = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
+                // Lightweight feedback
+                const prev = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.disabled = true;
+                setTimeout(() => { btn.textContent = prev; btn.disabled = false; }, 1200);
+            } catch (err) {
+                console.error('Copy failed', err);
+            }
+        });
     }
 
     // Update the price warning in the actions area
@@ -950,8 +1070,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         priceWarning.innerHTML = html;
     }
-
-    // Alphabetic index removed
 
     // Dark mode toggle functionality
     const setDarkMode = (enabled) => {
@@ -1044,6 +1162,4 @@ document.addEventListener('DOMContentLoaded', () => {
     checkSession();
     fetchItems();
     // fetchShoppingLists() and checkPrices() will be called after login
-
-    // Remove extra closing brace
 });

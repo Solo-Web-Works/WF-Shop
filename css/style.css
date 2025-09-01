@@ -138,11 +138,59 @@ a {
             color: var(--colorWhite);
         }
     }
+
+
+    /* Disabled/Added button visual treatment */
+    &:disabled, &.added {
+        background-color: var(--colorLightGray);
+        color: var(--colorDarkGray);
+        cursor: not-allowed;
+        opacity: 0.9;
+    }
+
+    &:disabled:hover, &.added:hover { background-color: var(--colorMedGray); }
 }
 
 .auth-message {
     font-size: 0.95rem;
     margin-top: 0.5rem;
+}
+
+/* Clickable seller name in price breakdown */
+.seller-copy {
+    background: none;
+    border: none;
+    color: var(--colorPrimary);
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+    text-decoration: underline;
+}
+.seller-copy:hover { color: var(--colorPrimaryHover); }
+.seller-copy:disabled {
+    cursor: default;
+    opacity: 0.75;
+    text-decoration: none;
+}
+
+/* Icon-only variant used in seller grouping */
+.seller-copy.copy-icon {
+    text-decoration: none;
+    margin-left: .4rem;
+    font-size: 0.95em;
+    line-height: 1;
+}
+
+/* Align copy icons to the end of each row */
+#prices-breakdown ul li {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+#prices-breakdown ul li .line-left {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .user-dropdown {
@@ -441,6 +489,8 @@ a {
     #prices-breakdown {
         padding: 0 1.25rem;
 
+        .kbd-hint { margin-bottom: 1rem; }
+
         h4 {
             margin-bottom: .5rem;
             padding-bottom: .25rem;
@@ -459,7 +509,7 @@ a {
                 line-height: 1.35;
                 list-style: none;
                 margin: 0 .5rem .125rem;
-                padding: .375rem .5rem;
+                padding: .375rem .125rem;
 
                 &:last-child { border-bottom: none; }
             }

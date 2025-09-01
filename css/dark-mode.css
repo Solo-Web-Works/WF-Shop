@@ -24,6 +24,14 @@ body.dark-mode {
     .button {
         background-color: var(--colorPrimaryButton);
         color: var(--colorWhite);
+
+        &:disabled,
+        &.added {
+            background-color: var(--colorLightGray);
+            color: var(--colorDarkGray);
+        }
+        &:disabled:hover,
+        &.added:hover { background-color: var(--colorMedGray); }
     }
 
     .btnMode { color: var(--colorWhite); }
