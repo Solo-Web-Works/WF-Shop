@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="auth-message">
                     <a href="#" id="show-register-link">Need an account? Register</a>
                 </div>
-                <div class="auth-message"></div>
+                <div id="auth-message" class="auth-message" role="status" aria-live="polite"></div>
             `
             : `
                 <form id="register-form" autocomplete="on">
@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="auth-message">
                     <a href="#" id="show-login-link">Already have an account? Login</a>
                 </div>
-                <div class="auth-message"></div>
+                <div id="auth-message" class="auth-message" role="status" aria-live="polite"></div>
             `;
             userAuthArea.appendChild(formDiv);
             if (showLogin) {
@@ -322,7 +322,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await resp.json();
             if (resp.ok && data.success) {
-                showAuthMessage('Registration successful! You can now log in.');
+                // Switch to Login view, prefill username, focus password, and show success message
+                showLogin = true;
+                renderUserAuthUI();
+                const loginUserEl = document.getElementById('login-username');
+                const loginPassEl = document.getElementById('login-password');
+                if (loginUserEl) loginUserEl.value = normalizedUsername;
+                if (loginPassEl) loginPassEl.focus();
+                showAuthMessage('Account created — you can now log in.');
             } else {
                 showAuthMessage(data.error || 'Registration failed.', true);
             }
@@ -337,10 +344,18 @@ document.addEventListener('DOMContentLoaded', () => {
             await fetch('api/logout.php', { method: 'POST' });
         } catch (e) { }
 
+        // Clear session and return user to Login view
         userSession = null;
+        showLogin = true;
 
+        // Re-render auth UI first so the login form is visible
+        renderUserAuthUI();
         updateUIForAuthState();
-        fetchShoppingLists();
+
+        // Optional UX niceties: focus username and show feedback
+        const loginUserEl = document.getElementById('login-username');
+        if (loginUserEl) loginUserEl.focus();
+        showAuthMessage('You have been logged out.');
     }
 
     // Enable/disable UI based on login state
@@ -724,7 +739,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const labelDiv = document.createElement('div');
             labelDiv.classList.add('item-info');
-            labelDiv.innerHTML = '<p>' + link + '</p>';
+            // Add wiki link and Warframe.market link
+            const wfmLink = item.slug ? `<a target="_blank" rel="noopener noreferrer" href="https://warframe.market/items/${item.slug}" class="wfm-link" title="Open on Warframe.market">WFM</a>` : '';
+            labelDiv.innerHTML = `<p>${link}${wfmLink ? ' · ' + wfmLink : ''}</p>`;
 
             // Determine best price from freshly fetched orders when available,
             // falling back to any server-provided item.price
@@ -967,7 +984,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 html += `<h4>${seller}</h4><ul>`;
                 sellers[seller].forEach(item => {
                     const aria = `Copy whisper for ${seller} about ${item.name}`;
-                    html += `<li><span class="line-left">${item.name}: ${item.price} Platinum</span><button class="seller-copy copy-icon" data-seller="${seller}" data-item="${item.name}" title="${aria}" aria-label="${aria}">📋</button></li>`;
+                    html += `<li><span class="line-left">${item.name}: ${item.price} Platinum</span><button class="seller-copy copy-icon" data-seller="${seller}" data-item="${item.name}" data-price="${item.price}" title="${aria}" aria-label="${aria}">📋</button></li>`;
                 });
                 html += '</ul>';
             }
@@ -999,7 +1016,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Output sellers in order of appearance in sellOrders
                     Object.keys(sellerMap).forEach(seller => {
                         const aria = `Copy whisper for ${seller} about ${item.name}`;
-                        html += `<li><span class="line-left">${seller} (x${sellerMap[seller].quantity}): ${sellerMap[seller].price} Platinum</span><button class="seller-copy copy-icon" data-seller="${seller}" data-item="${item.name}" title="${aria}" aria-label="${aria}">📋</button></li>`;
+                        html += `<li><span class="line-left">${seller} (x${sellerMap[seller].quantity}): ${sellerMap[seller].price} Platinum</span><button class="seller-copy copy-icon" data-seller="${seller}" data-item="${item.name}" data-price="${sellerMap[seller].price}" title="${aria}" aria-label="${aria}">📋</button></li>`;
                     });
                 } else {
                     html += `<li>No sellers found</li>`;
@@ -1020,8 +1037,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!btn) return;
             const seller = btn.getAttribute('data-seller');
             const itemName = btn.getAttribute('data-item');
+            const price = btn.getAttribute('data-price');
             if (!seller || !itemName) return;
-            const msg = `/w ${seller} I'm interested in your ${itemName}. Is it still available?`;
+            // Match Warframe.market native whisper style
+            const pricePart = price ? ` for ${price} platinum` : '';
+            const msg = `/w ${seller} Hi, I want to buy: ${itemName}${pricePart}. (warframe.market)`;
 
             try {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
