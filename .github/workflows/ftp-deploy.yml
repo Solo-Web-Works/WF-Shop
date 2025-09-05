@@ -18,7 +18,7 @@ jobs:
     - name: 📂 Sync files
       uses: SamKirkland/FTP-Deploy-Action@v4.3.5
       with:
-        dry-run: true
+        # dry-run: true
         server: ftpupload.net
         port: 21
         protocol: ftps
