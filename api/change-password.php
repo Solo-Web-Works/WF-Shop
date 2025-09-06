@@ -9,8 +9,8 @@
  * @category API
  * @package  WFList
  * @author   Keith Solomon <keith@keithsolmon.net>
- * @license  MIT License
- * @link     https://git.keithsolomon.net/keith/Warframe_Shopping_List
+ * @license  Unlicense <https://unlicense.org>
+ * @link     https://github.com/Solo-Web-Works/WF-Shop
  */
 
 require_once __DIR__ . '/helpers.php';

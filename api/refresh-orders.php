@@ -7,9 +7,9 @@
  * @category API
  * @package  WFList
  * @author   Keith Solomon <keith@keithsolmon.net>
- * @license  MIT License
+ * @license  Unlicense <https://unlicense.org>
  * @version  GIT: $Id$
- * @link     https://git.keithsolomon.net/keith/Warframe_Shopping_List
+ * @link     https://github.com/Solo-Web-Works/WF-Shop
  */
 
 require_once __DIR__ . '/helpers.php';
@@ -40,11 +40,13 @@ if ($latest === null) {
     exit;
 }
 
-echo json_encode([
+echo json_encode(
+    [
     $item_slug => [
         'name'         => $item_slug,
         'orders'       => $latest['orders_json'],
         'last_checked' => $latest['last_checked'],
     ]
-]);
+    ]
+);
 

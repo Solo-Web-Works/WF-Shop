@@ -7,9 +7,9 @@
  * @category API
  * @package  WFList
  * @author   Keith Solomon <keith@keithsolmon.net>
- * @license  MIT License
+ * @license  Unlicense <https://unlicense.org>
  * @version  GIT: $Id$
- * @link     https://git.keithsolomon.net/keith/Warframe_Shopping_List
+ * @link     https://github.com/Solo-Web-Works/WF-Shop
  */
 
 header('Content-Type: application/json');

@@ -942,7 +942,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderItems();
     }
 
-
     // Create a new shopping list
     async function createShoppingList() {
         const name = newListNameInput.value.trim();
