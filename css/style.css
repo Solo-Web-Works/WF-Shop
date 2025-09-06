@@ -80,6 +80,38 @@ header, footer {
     }
 }
 
+.welcome-banner {
+    align-items: center;
+    background: #eef7f9;
+    border: 1px solid var(--colorPrimary);
+    border-radius: .5rem;
+    display: flex;
+    gap: .75rem;
+    justify-content: space-between;
+    margin: .25rem .5rem 1rem;
+    padding: .5rem .75rem;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 200ms ease, transform 200ms ease;
+
+    .welcome-text {
+        align-items: center;
+        display: flex;
+        gap: .5rem;
+        flex-wrap: wrap;
+    }
+}
+
+/* Ensure hidden attribute actually hides despite display:flex above */
+.welcome-banner[hidden] { display: none !important; }
+
+/* Fade-out state */
+.welcome-banner.is-hiding {
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+}
+
 .main-content {
     display: grid;
     gap: 1.25rem;
@@ -118,7 +150,7 @@ a {
 
 .button {
     background-color: var(--colorPrimary);
-    border: none;
+    border: 1px solid var(--colorPrimary);
     border-radius: .25rem;
     color: var(--colorWhite);
     cursor: pointer;
@@ -338,6 +370,7 @@ a {
 
         #clear-list-btn, #delete-list-btn {
             background-color: var(--colorDanger);
+            border: 1px solid var(--colorDanger);
             color: var(--colorWhite);
 
             &:hover { background-color: var(--colorDangerHover); }
@@ -393,6 +426,14 @@ a {
         display: flex;
         justify-content: space-between;
         padding: .5rem;
+        /* Visible focus ring when navigating with keyboard */
+        &:focus {
+            outline: 3px solid var(--colorPrimary);
+            outline-offset: 2px;
+            background: var(--colorPrimaryDarker);
+        }
+
+        button.ghost { margin-right: .25rem; }
 
         &.stripe {
             background: var(--colorPrimaryDarker);
@@ -489,6 +530,9 @@ a {
     #prices-breakdown {
         padding: 0 1.25rem;
 
+        /* Ensure any accidental stripe classes do not imply meaning here */
+        .stripe { background: transparent !important; }
+
         .kbd-hint { margin-bottom: 1rem; }
 
         h4 {
@@ -510,8 +554,12 @@ a {
                 list-style: none;
                 margin: 0 .5rem .125rem;
                 padding: .375rem .125rem;
+                background: transparent; /* Neutral rows (no implied meaning) */
+                transition: background-color 0.2s ease;
 
                 &:last-child { border-bottom: none; }
+                /* Subtle hover only, to aid scanning without implying status */
+                &:hover { background: rgba(0,0,0,0.03); }
             }
         }
     }
@@ -529,6 +577,11 @@ a {
 #shopping-list-content ul li .actions {
     flex: 0 0 auto;
     margin-left: .5rem;
+}
+
+#shopping-list-content ul li.stripe {
+    background: transparent !important;
+    border: 1px solid var(--colorLightGray) !important;
 }
 
 /* Mobile tab switcher styles */

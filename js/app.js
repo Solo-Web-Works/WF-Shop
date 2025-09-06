@@ -47,7 +47,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Render user authentication UI (login/register/logout or user info)
     // Only show one form (login or register) at a time
-    let showLogin = true;
+    let showLogin = false;
+    const hasVisited = getCookie('hasVisited');
+
+    if (hasVisited) {
+        showLogin = true;
+    }
+
     function renderUserAuthUI() {
         if (!userAuthArea) return;
         userAuthArea.innerHTML = '';
@@ -251,9 +257,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const msgDiv = document.getElementById('auth-message');
         if (msgDiv) {
             msgDiv.textContent = msg;
+            msgDiv.style.backgroundColor = isError ? '#f8d7da' : '#d1e7dd';
             msgDiv.style.color = isError ? '#d9534f' : '#005f73';
+            msgDiv.style.padding = '0.5rem';
+            msgDiv.style.borderRadius = '0.25rem';
+            msgDiv.style.textAlign = 'center';
             clearTimeout(authMessageTimeout);
-            authMessageTimeout = setTimeout(() => { msgDiv.textContent = ''; }, 4000);
+            authMessageTimeout = setTimeout(() => {
+                msgDiv.textContent = '';
+                msgDiv.style.backgroundColor = '';
+                msgDiv.style.color = '';
+                msgDiv.style.padding = '';
+                msgDiv.style.borderRadius = '';
+                msgDiv.style.textAlign = '';
+            }, 4000);
         }
     }
 
@@ -400,6 +417,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalCostDiv = document.getElementById('total-cost');
     const pricesBreakdown = document.getElementById('prices-breakdown');
     const pricesGroupModeSelect = document.getElementById('prices-group-mode');
+    const welcomeBanner = document.getElementById('welcome-banner');
+    const dismissWelcomeBtn = document.getElementById('dismiss-welcome');
     let items = [];
     let shoppingLists = [];
     let activeListId = null;
@@ -417,6 +436,85 @@ document.addEventListener('DOMContentLoaded', () => {
         return v ? v[2] : null;
     }
     let pricesGroupMode = 'seller';
+    // In-memory throttle map for per-item refreshes
+    window._refreshCooldowns = window._refreshCooldowns || {};
+
+    async function refreshItemPrice(slug, name, containerEl, buttonEl) {
+        if (!slug) return;
+        const now = Date.now();
+        const last = window._refreshCooldowns[slug] || 0;
+        if (now - last < 8000) { // basic throttle: 8s per item
+            return;
+        }
+        window._refreshCooldowns[slug] = now;
+
+        if (buttonEl) {
+            buttonEl.disabled = true;
+            const prev = buttonEl.textContent;
+            buttonEl.textContent = 'Refreshing…';
+            try {
+                const resp = await fetch(`api/refresh-orders.php?item_slug=${slug}`);
+                const data = await resp.json();
+                const priceData = data && data[slug];
+                if (priceData && Array.isArray(priceData.orders)) {
+                    const bestOrder = priceData.orders
+                        .filter(o => o.type === 'sell')
+                        .sort((a, b) => a.platinum - b.platinum)[0];
+                    if (bestOrder) {
+                        let priceSpan = containerEl.querySelector('.price');
+                        if (!priceSpan) {
+                            priceSpan = document.createElement('span');
+                            priceSpan.classList.add('price');
+                            containerEl.querySelector('.item-info')?.appendChild(priceSpan);
+                        }
+                        priceSpan.textContent = `Best Price: ${bestOrder.platinum} Platinum`;
+                    }
+                    if (window._lastPrices) {
+                        window._lastPrices[slug] = {
+                            name: name,
+                            orders: priceData.orders,
+                            last_checked: priceData.last_checked
+                        };
+                        renderPrices(window._lastPrices);
+                    }
+                }
+            } catch (e) {
+                console.error('Refresh failed', e);
+            } finally {
+                buttonEl.textContent = prev;
+                buttonEl.disabled = false;
+            }
+        }
+    }
+
+    // First-time vs. returning user banner (cookie-backed)
+    (function handleFirstVisitBanner() {
+        if (!welcomeBanner) return;
+        const hasVisited = getCookie('hasVisited');
+        if (!hasVisited) {
+            // Show banner on first visit until dismissed
+            welcomeBanner.hidden = false;
+        }
+        if (dismissWelcomeBtn) {
+            dismissWelcomeBtn.addEventListener('click', () => {
+                setCookie('hasVisited', '1', 365);
+                if (welcomeBanner.hidden) return;
+                let done = false;
+                const onEnd = () => {
+                    if (done) return;
+                    done = true;
+                    welcomeBanner.hidden = true;
+                    welcomeBanner.classList.remove('is-hiding');
+                    welcomeBanner.removeEventListener('transitionend', onEnd);
+                };
+                welcomeBanner.addEventListener('transitionend', onEnd);
+                // Trigger fade-out
+                welcomeBanner.classList.add('is-hiding');
+                // Fallback if transitionend doesn’t fire
+                setTimeout(onEnd, 260);
+            });
+        }
+    })();
 
     // Fetch items and categories
     async function fetchItems() {
@@ -442,10 +540,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // If there is no search query or fewer than 2 chars, show a hint
         if (q.length < 2) {
             itemList.innerHTML = '<li class="empty-hint">Type at least 2 characters to search</li>';
+            // ARIA: collapse popup when not enough characters
+            if (searchInput) {
+                searchInput.setAttribute('aria-expanded', 'false');
+                searchInput.removeAttribute('aria-activedescendant');
+            }
             return;
         }
 
         itemList.innerHTML = '';
+        // Prepare ARIA role for keyboard navigation
+        itemList.setAttribute('role', 'listbox');
+        if (searchInput) searchInput.setAttribute('aria-expanded', 'true');
 
         const filteredItems = items
             .filter(item => {
@@ -460,12 +566,23 @@ document.addEventListener('DOMContentLoaded', () => {
         // Empty state when a valid query returns no matches
         if (filteredItems.length === 0) {
             itemList.innerHTML = '<li class="empty-hint">No items match your search</li>';
+            if (searchInput) {
+                searchInput.setAttribute('aria-expanded', 'false');
+                searchInput.removeAttribute('aria-activedescendant');
+            }
             return;
         }
 
         filteredItems.forEach((item, index) => {
             const li = document.createElement('li');
-
+            li.setAttribute('role', 'option');
+            li.setAttribute('tabindex', '-1');
+            // Use data-attrs so we can restore focus after re-render
+            if (item.slug) li.dataset.slug = item.slug;
+            li.dataset.name = item.name;
+            // Ensure each option has a stable ID for aria-activedescendant
+            const optionId = `item-opt-${item.slug || ('idx-' + index)}`;
+            li.id = optionId;
             li.textContent = item.name;
 
             if (index % 2 === 1) {
@@ -493,6 +610,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             itemList.appendChild(li);
         });
+
+        // Reset keyboard focus index after re-render
+        searchFocusIndex = -1;
+        refreshSearchListRovingTabindex();
+
+        // If there is a pending row to restore focus to, try to focus it now
+        if (searchPendingFocus && itemList) {
+            const rows = getSearchRows();
+            let idx = -1;
+            if (searchPendingFocus.slug) {
+                idx = rows.findIndex(li => li.dataset && li.dataset.slug === searchPendingFocus.slug);
+            }
+            if (idx < 0 && searchPendingFocus.name) {
+                idx = rows.findIndex(li => li.dataset && li.dataset.name === searchPendingFocus.name);
+            }
+            if (idx >= 0) {
+                focusSearchRow(idx, true);
+            }
+            searchPendingFocus = null;
+        }
     }
 
     // Populate categories
@@ -766,13 +903,26 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             li.appendChild(labelDiv);
 
+            const actions = document.createElement('div');
+            actions.classList.add('actions');
+
+            const refreshBtn = document.createElement('button');
+            refreshBtn.classList.add('button', 'ghost');
+            refreshBtn.textContent = 'Refresh';
+            refreshBtn.title = `Refresh best price for ${item.name}`;
+            refreshBtn.setAttribute('aria-label', `Refresh best price for ${item.name}`);
+            refreshBtn.onclick = () => refreshItemPrice(item.slug, item.name, li, refreshBtn);
+            actions.appendChild(refreshBtn);
+
             const removeButton = document.createElement('button');
             removeButton.textContent = 'Remove';
             removeButton.setAttribute('aria-label', `Remove ${item.name} from shopping list`);
             removeButton.setAttribute('title', `Remove ${item.name} from shopping list`);
             removeButton.classList.add('button');
             removeButton.onclick = () => removeFromShoppingList(item.id);
-            li.appendChild(removeButton);
+            actions.appendChild(removeButton);
+
+            li.appendChild(actions);
 
             ul.appendChild(li);
         });
@@ -1131,6 +1281,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         // Initialize state on load
         updateSearchUI();
+        // ARIA combobox wiring
+        searchInput.setAttribute('role', 'combobox');
+        searchInput.setAttribute('aria-autocomplete', 'list');
+        searchInput.setAttribute('aria-haspopup', 'listbox');
+        searchInput.setAttribute('aria-controls', 'item-list');
+        searchInput.setAttribute('aria-expanded', 'false');
+    }
+    // Arrow-key navigation: from search box into results
+    if (searchInput && itemList) {
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                const rows = getSearchRows();
+                if (rows.length === 0) return;
+                e.preventDefault();
+                searchFocusIndex = (e.key === 'ArrowDown') ? 0 : rows.length - 1;
+                refreshSearchListRovingTabindex();
+                focusSearchRow(searchFocusIndex, true);
+            }
+        });
     }
     if (clearSearchBtn && searchInput) {
         clearSearchBtn.addEventListener('click', () => {
@@ -1138,6 +1307,95 @@ document.addEventListener('DOMContentLoaded', () => {
             updateSearchUI();
             renderItems();
             searchInput.focus();
+        });
+    }
+
+    // --- Search results keyboard navigation (roving tabindex) ---
+    let searchFocusIndex = -1;
+    let searchPendingFocus = null; // { slug?, name? }
+    function getSearchRows() {
+        if (!itemList) return [];
+        // Only actual item rows (exclude empty-hint)
+        return Array.from(itemList.querySelectorAll('li'))
+            .filter(li => !li.classList.contains('empty-hint'));
+    }
+    function refreshSearchListRovingTabindex() {
+        const rows = getSearchRows();
+        rows.forEach((li, i) => {
+            li.setAttribute('tabindex', i === searchFocusIndex ? '0' : '-1');
+            li.setAttribute('aria-selected', i === searchFocusIndex ? 'true' : 'false');
+        });
+        // Update active descendant to announce currently focused/selected row
+        if (searchInput) {
+            const activeEl = rows[searchFocusIndex];
+            if (activeEl && activeEl.id) {
+                searchInput.setAttribute('aria-activedescendant', activeEl.id);
+            } else {
+                searchInput.removeAttribute('aria-activedescendant');
+            }
+        }
+    }
+    function focusSearchRow(index, scroll) {
+        const rows = getSearchRows();
+        if (rows.length === 0) return;
+        const clamped = Math.max(0, Math.min(rows.length - 1, index));
+        searchFocusIndex = clamped;
+        refreshSearchListRovingTabindex();
+        const el = rows[clamped];
+        if (el) {
+            el.focus({ preventScroll: !scroll });
+            if (scroll) el.scrollIntoView({ block: 'nearest' });
+        }
+    }
+    function activateSearchRow(index) {
+        const rows = getSearchRows();
+        const el = rows[index];
+        if (!el) return;
+        // Record which row to restore focus to after any re-renders
+        searchPendingFocus = { slug: el.dataset?.slug || null, name: el.dataset?.name || null };
+        // Prefer the first enabled button inside (the Add action)
+        const btn = el.querySelector('button.button:not(:disabled)');
+        if (btn) btn.click();
+    }
+    if (itemList) {
+        itemList.addEventListener('keydown', (e) => {
+            const rows = getSearchRows();
+            if (rows.length === 0) return;
+            // Ensure index is initialized if user tabs in
+            if (searchFocusIndex < 0) {
+                const idx = rows.findIndex(li => li === document.activeElement);
+                searchFocusIndex = idx >= 0 ? idx : 0;
+            }
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                focusSearchRow(searchFocusIndex + 1, true);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                focusSearchRow(searchFocusIndex - 1, true);
+            } else if (e.key === 'Home') {
+                e.preventDefault();
+                focusSearchRow(0, true);
+            } else if (e.key === 'End') {
+                e.preventDefault();
+                focusSearchRow(rows.length - 1, true);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                activateSearchRow(searchFocusIndex);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                if (searchInput) searchInput.focus();
+            }
+        });
+        // Keep index in sync when user clicks a row
+        itemList.addEventListener('click', (e) => {
+            const li = e.target.closest('li');
+            if (!li || li.classList.contains('empty-hint')) return;
+            const rows = getSearchRows();
+            const idx = rows.indexOf(li);
+            if (idx >= 0) {
+                searchFocusIndex = idx;
+                refreshSearchListRovingTabindex();
+            }
         });
     }
 
