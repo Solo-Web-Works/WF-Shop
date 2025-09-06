@@ -39,8 +39,16 @@
             <div id="user-auth-area">
                 <!-- User authentication UI will be rendered here by JS -->
             </div>
-
         </header>
+
+        <!-- First-visit welcome banner (shown only for new users) -->
+        <div id="welcome-banner" class="welcome-banner" hidden role="region" aria-label="Welcome banner">
+            <div class="welcome-text">
+                <strong>Welcome!</strong>
+                <span>Start by creating a list, then search to add items.</span>
+            </div>
+            <button id="dismiss-welcome" class="button" aria-label="Dismiss welcome banner">Got it</button>
+        </div>
 
         <div class="mobile-tabs" id="mobile-tabs">
             <button id="tab-items" class="tab-btn">Items</button>

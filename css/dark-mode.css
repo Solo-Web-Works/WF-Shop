@@ -23,6 +23,7 @@ body.dark-mode {
 
     .button {
         background-color: var(--colorPrimaryButton);
+        border: 1px solid var(--colorPrimaryButton);
         color: var(--colorWhite);
 
         &:disabled,
@@ -32,6 +33,17 @@ body.dark-mode {
         }
         &:disabled:hover,
         &.added:hover { background-color: var(--colorMedGray); }
+
+        &.ghost {
+            background: transparent;
+            border: 1px solid var(--colorPrimaryButton);
+            color: var(--colorPrimaryButton);
+
+            &:hover {
+                background: var(--colorPrimaryButton);
+                color: var(--colorWhite);
+            }
+        }
     }
 
     .btnMode { color: var(--colorWhite); }
@@ -68,6 +80,13 @@ body.dark-mode {
         }
     }
 
+    /* Stronger focus affordance for search results in dark mode */
+    #item-list li:focus {
+        outline: 3px solid var(--colorPrimary);
+        outline-offset: 2px;
+        background: rgba(50, 145, 165, 0.25);
+    }
+
     #list-select {
         background: var(--colorWhite);
         border: 1px solid var(--colorWhite);
@@ -82,7 +101,13 @@ body.dark-mode {
             .price-card, ul {
                 border-color: var(--colorWhite);
 
-                li { border-color: var(--colorMedGray); }
+                li {
+                    border-color: var(--colorMedGray);
+                    background: transparent; /* Neutral in dark mode too */
+                    transition: background-color 0.2s ease;
+                }
+
+                li:hover { background: rgba(255,255,255,0.06); }
             }
         }
     }
@@ -94,6 +119,12 @@ body.dark-mode {
             #total-cost { color: var(--colorWhite); }
             #price-warning { color: var(--colorWarning); }
         }
+    }
+
+    /* Welcome banner in dark mode */
+    .welcome-banner {
+        background: var(--colorPrimaryDark);
+        border-color: var(--colorPrimary);
     }
 
     #new-list-dialog {
