@@ -70,21 +70,13 @@ export function initItems() {
             li.setAttribute('tabindex', '-1');
 
             if (item.slug) li.dataset.slug = item.slug;
-
-            // Escape item.name for dataset and display
-            const safeName = String(item.name)
-              .replace(/&/g, '&amp;')
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;')
-              .replace(/"/g, '&quot;')
-              .replace(/'/g, '&#39;');
-
-            li.dataset.name = safeName;
+            const itemName = String(item.name);
+            li.dataset.name = itemName;
 
             const optionId = `item-opt-${item.slug || ('idx-' + index)}`;
 
             li.id = optionId;
-            li.textContent = safeName;
+            li.textContent = itemName;
 
             if (index % 2 === 1) {
                 li.classList.add('stripe');
@@ -101,12 +93,12 @@ export function initItems() {
                 addButton.disabled = true;
                 addButton.classList.add('added');
                 addButton.textContent = 'Added';
-                addButton.title = `${safeName} is already in the active list`;
-                addButton.setAttribute('aria-label', `${safeName} is already in the active list`);
+                addButton.title = `${itemName} is already in the active list`;
+                addButton.setAttribute('aria-label', `${itemName} is already in the active list`);
             } else {
                 addButton.onclick = () => window.addToShoppingList(item.id);
-                addButton.title = `Add ${safeName} to active list`;
-                addButton.setAttribute('aria-label', `Add ${safeName} to active list`);
+                addButton.title = `Add ${itemName} to active list`;
+                addButton.setAttribute('aria-label', `Add ${itemName} to active list`);
             }
 
             li.appendChild(addButton);

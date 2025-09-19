@@ -73,14 +73,7 @@ export function initLists() {
             li.setAttribute('aria-selected', String(list.id == selectedId));
 
             li.tabIndex = (list.id == selectedId) ? 0 : -1;
-            // Escape list name for display
-            const safeName = String(list.name)
-              .replace(/&/g, '&amp;')
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;')
-              .replace(/"/g, '&quot;')
-              .replace(/'/g, '&#39;');
-            li.textContent = safeName;
+            li.textContent = String(list.name);
             li.dataset.id = list.id;
 
             if (list.id == selectedId) {
