@@ -29,7 +29,12 @@ $pdo = getDb();
 
 $userId = $_SESSION['user_id'];
 
-$stmt = $pdo->prepare("SELECT * FROM shopping_lists WHERE user_id = ?");
+
+$stmt = $pdo->prepare(
+    "SELECT id, name
+    FROM shopping_lists
+    WHERE user_id = ? LIMIT 500"
+);
 $stmt->execute([$userId]);
 
 $lists = $stmt->fetchAll(PDO::FETCH_ASSOC);

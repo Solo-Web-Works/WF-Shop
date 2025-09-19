@@ -47,7 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        $stmt = $pdo->prepare("DELETE FROM shopping_list_items WHERE list_id = ?");
+        // Limit to 500 items per clear operation
+        $stmt = $pdo->prepare(
+            "DELETE FROM shopping_list_items
+            WHERE list_id = ?
+            LIMIT 500"
+        );
         $stmt->execute([$listId]);
 
         echo json_encode(['success' => true]);

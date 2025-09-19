@@ -16,8 +16,20 @@ require_once __DIR__ . '/../database/db.php';
 header('Content-Type: application/json');
 
 $input    = json_decode(file_get_contents('php://input'), true);
-$username = trim($input['username'] ?? '');
-$password = $input['password'] ?? '';
+
+// Sanitize and validate input
+$username = isset($input['username']) ? trim(strip_tags($input['username'])) : '';
+if ($username && strlen($username) > 32) {
+    $username = substr($username, 0, 32);
+}
+if ($username && !preg_match('/^[\w\-]+$/', $username)) {
+    $username = '';
+}
+
+$password = isset($input['password']) ? $input['password'] : '';
+if ($password && strlen($password) > 128) {
+    $password = substr($password, 0, 128);
+}
 
 if (!$username || !$password) {
     http_response_code(400);
@@ -26,7 +38,12 @@ if (!$username || !$password) {
 }
 
 $pdo = getDb();
-$stmt = $pdo->prepare('SELECT id, password_hash FROM users WHERE username = ?');
+
+$stmt = $pdo->prepare(
+    'SELECT id, password_hash
+    FROM users
+    WHERE username = ? LIMIT 1'
+);
 $stmt->execute([$username]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 

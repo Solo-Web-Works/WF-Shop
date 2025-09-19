@@ -1,11 +1,5 @@
-import { initAuth } from './modules/auth.js';
-import { initUI } from './modules/ui.js';
-import { initLists } from './modules/lists.js';
-import { initItems } from './modules/items.js';
-import { initUtils } from './modules/utils.js';
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Mobile tab logic
+// UI rendering and event handling
+export function initUI() {
     const mobileTabs = document.getElementById('mobile-tabs');
     const tabItemsBtn = document.getElementById('tab-items');
     const tabListsBtn = document.getElementById('tab-lists');
@@ -17,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (mobileTabs) mobileTabs.style.display = 'flex';
             if (itemCatalogPanel) itemCatalogPanel.classList.remove('active');
             if (shoppingListsPanel) shoppingListsPanel.classList.remove('active');
-            // Default to items tab
+
             if (tabItemsBtn && tabItemsBtn.classList.contains('active')) {
                 if (itemCatalogPanel) itemCatalogPanel.classList.add('active');
             } else if (tabListsBtn && tabListsBtn.classList.contains('active')) {
@@ -36,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tabListsBtn.classList.remove('active');
             updateMobileTabs();
         });
+
         tabListsBtn.addEventListener('click', () => {
             tabListsBtn.classList.add('active');
             tabItemsBtn.classList.remove('active');
@@ -44,15 +39,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.addEventListener('resize', updateMobileTabs);
-    // Initial tab state
     setTimeout(updateMobileTabs, 0);
-
-    // Modularized app initialization
-    initUtils();
-    initAuth();
-    initUI();
-    initLists();
-    initItems();
-});
-
-// All authentication, shopping list, item, and keyboard navigation logic is now handled in modules.
+}

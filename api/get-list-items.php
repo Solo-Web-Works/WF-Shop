@@ -31,10 +31,12 @@ if ($list_id) {
     $userId = $_SESSION['user_id'];
 
     // Check that the list belongs to the user
+
     $check = $pdo->prepare(
         "SELECT id FROM shopping_lists
         WHERE id = ?
-        AND user_id = ?"
+        AND user_id = ?
+        LIMIT 1"
     );
     $check->execute([$list_id, $userId]);
 
@@ -48,7 +50,8 @@ if ($list_id) {
         "SELECT sli.id, i.name, i.slug
         FROM shopping_list_items sli
         JOIN items i ON sli.item_id = i.id
-        WHERE sli.list_id = ?"
+        WHERE sli.list_id = ?
+        LIMIT 500"
     );
     $stmt->execute(array($list_id));
 

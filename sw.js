@@ -42,21 +42,28 @@ self.addEventListener('install', (event) => {
     caches.open(STATIC_CACHE)
       .then(cache => cache.addAll(PRECACHE_URLS))
       .then(() => self.skipWaiting())
+      .catch(err => {
+        console.error('Service Worker install failed:', err);
+      })
   );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
-      const keys = await caches.keys();
-      await Promise.all(
-        keys.map(key => {
-          if (key !== STATIC_CACHE && key !== RUNTIME_CACHE) {
-            return caches.delete(key);
-          }
-        })
-      );
-      await self.clients.claim();
+      try {
+        const keys = await caches.keys();
+        await Promise.all(
+          keys.map(key => {
+            if (key !== STATIC_CACHE && key !== RUNTIME_CACHE) {
+              return caches.delete(key);
+            }
+          })
+        );
+        await self.clients.claim();
+      } catch (err) {
+        console.error('Service Worker activate failed:', err);
+      }
     })()
   );
 });
@@ -86,10 +93,15 @@ self.addEventListener('fetch', (event) => {
           return fresh;
         } catch (err) {
           // Offline fallback
-          const cache = await caches.open(STATIC_CACHE);
-          return (await cache.match('/offline.html')) ||
-                 (await cache.match('/index.html')) ||
-                 Response.error();
+          try {
+            const cache = await caches.open(STATIC_CACHE);
+            return (await cache.match('/offline.html')) ||
+                   (await cache.match('/index.html')) ||
+                   Response.error();
+          } catch (cacheErr) {
+            console.error('Service Worker navigation fallback failed:', cacheErr);
+            return Response.error();
+          }
         }
       })()
     );
@@ -105,12 +117,17 @@ self.addEventListener('fetch', (event) => {
   if (isStatic && isSameOrigin) {
     event.respondWith(
       (async () => {
-        const cached = await caches.match(request);
-        if (cached) return cached;
-        const fresh = await fetch(request);
-        const cache = await caches.open(STATIC_CACHE);
-        cache.put(request, fresh.clone()).catch(() => {});
-        return fresh;
+        try {
+          const cached = await caches.match(request);
+          if (cached) return cached;
+          const fresh = await fetch(request);
+          const cache = await caches.open(STATIC_CACHE);
+          cache.put(request, fresh.clone()).catch(() => {});
+          return fresh;
+        } catch (err) {
+          console.error('Service Worker static asset fetch failed:', err);
+          return Response.error();
+        }
       })()
     );
     return;
@@ -120,25 +137,36 @@ self.addEventListener('fetch', (event) => {
   if (isApiGet(request.url)) {
     event.respondWith(
       (async () => {
-        const cache = await caches.open(RUNTIME_CACHE);
-        const cached = await cache.match(request);
-        const networkPromise = fetch(request)
-          .then(resp => {
-            // Only cache successful responses
-            if (resp && resp.ok) {
-              cache.put(request, resp.clone()).catch(() => {});
-            }
-            return resp;
-          })
-          .catch(() => null);
+        try {
+          const cache = await caches.open(RUNTIME_CACHE);
+          const cached = await cache.match(request);
+          const networkPromise = fetch(request)
+            .then(resp => {
+              // Only cache successful responses
+              if (resp && resp.ok) {
+                cache.put(request, resp.clone()).catch(() => {});
+              }
+              return resp;
+            })
+            .catch(err => {
+              console.error('Service Worker API fetch failed:', err);
+              return null;
+            });
 
-        // Return cached immediately if available; otherwise wait for network
-        return cached || (await networkPromise) ||
-          // If both fail, fall back to a minimal Response
-          new Response(JSON.stringify({ error: 'offline' }), {
+          // Return cached immediately if available; otherwise wait for network
+          return cached || (await networkPromise) ||
+            // If both fail, fall back to a minimal Response
+            new Response(JSON.stringify({ error: 'offline' }), {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' }
+            });
+        } catch (err) {
+          console.error('Service Worker API cache fetch failed:', err);
+          return new Response(JSON.stringify({ error: 'offline' }), {
             status: 503,
             headers: { 'Content-Type': 'application/json' }
           });
+        }
       })()
     );
     return;

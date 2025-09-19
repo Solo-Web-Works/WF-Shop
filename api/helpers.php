@@ -63,8 +63,8 @@ function getCachedOrders(string $itemName): ?array {
  */
 function fetchPriceFromAPI(string $itemName): ?array {
     $encodedName = urlencode(strtolower(str_replace(' ', '_', $itemName)));
-    $url = 'https://api.warframe.market/v2/orders/item/' . $encodedName . '/top';
-    // $url = 'https://api.warframe.market/v2/orders/item/' . $encodedName;
+    $baseUrl = getenv('WFM_API_BASE_URL') ?: 'https://api.warframe.market/v2';
+    $url = $baseUrl . '/orders/item/' . $encodedName . '/top';
 
     // Simple rate limiting
     usleep(500000); // 2 requests per second
