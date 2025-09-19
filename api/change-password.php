@@ -40,7 +40,8 @@ $newPassword     = $data['newPassword'];
 
 $db = getDb();
 
-$stmt = $db->prepare('SELECT password_hash FROM users WHERE id = :id');
+
+$stmt = $db->prepare('SELECT password_hash FROM users WHERE id = :id LIMIT 1');
 $stmt->execute([':id' => $userId]);
 
 $user = $stmt->fetch(PDO::FETCH_ASSOC);

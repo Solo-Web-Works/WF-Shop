@@ -39,7 +39,8 @@ if ($id) {
         JOIN shopping_lists sl
         ON sli.list_id = sl.id
         WHERE sli.id = ?
-        AND sl.user_id = ?"
+        AND sl.user_id = ?
+        LIMIT 1"
     );
     $check->execute([$id, $userId]);
 

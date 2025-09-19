@@ -19,12 +19,28 @@ header('Content-Type: application/json');
 
 $pdo = getDb();
 
-$search   = $_GET['search'] ?? '';
-$category = $_GET['category'] ?? '';
 
-$sql = 'SELECT i.id, i.slug, i.name, GROUP_CONCAT(it.tag) as tags ' .
-    'FROM items i ' .
-    'LEFT JOIN item_tags it ON i.id = it.item_id';
+// Sanitize and validate input
+$search = isset($_GET['search']) ? trim(strip_tags($_GET['search'])) : '';
+if ($search && strlen($search) > 64) {
+    $search = substr($search, 0, 64);
+}
+if ($search && !preg_match('/^[\w\s\-\'\(\)]+$/u', $search)) {
+    $search = '';
+}
+
+$category = isset($_GET['category']) ? trim(strip_tags($_GET['category'])) : '';
+if ($category && strlen($category) > 32) {
+    $category = substr($category, 0, 32);
+}
+if ($category && !preg_match('/^[\w\-]+$/u', $category)) {
+    $category = '';
+}
+
+
+$sql = 'SELECT i.id, i.slug, i.name, GROUP_CONCAT(it.tag) as tags '
+    . 'FROM items i '
+    . 'LEFT JOIN item_tags it ON i.id = it.item_id';
 
 $params = array();
 
@@ -43,7 +59,7 @@ if ($category) {
     $params[] = $category;
 }
 
-$sql .= ' GROUP BY i.id, i.slug, i.name';
+$sql .= ' GROUP BY i.id, i.slug, i.name LIMIT 500';
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);

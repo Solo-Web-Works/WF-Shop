@@ -26,8 +26,21 @@ header('Content-Type: application/json');
 
 $data = json_decode(file_get_contents('php://input'), true);
 
-$list_id = $data['list_id'] ?? '';
-$item_id = $data['item_id'] ?? '';
+
+
+// Sanitize and validate input
+$list_id = (
+    isset($data['list_id']) &&
+    ctype_digit(strval($data['list_id'])) &&
+    intval($data['list_id']) > 0
+) ? intval($data['list_id']) : 0;
+$item_id = isset($data['item_id']) ? trim(strip_tags($data['item_id'])) : '';
+if ($item_id && strlen($item_id) > 32) {
+    $item_id = substr($item_id, 0, 32);
+}
+if ($item_id && !preg_match('/^[a-zA-Z0-9_-]+$/', $item_id)) {
+    $item_id = '';
+}
 
 if ($list_id && $item_id) {
     $pdo = getDb();
@@ -38,7 +51,8 @@ if ($list_id && $item_id) {
     $check = $pdo->prepare(
         "SELECT id FROM shopping_lists
         WHERE id = ?
-        AND user_id = ?"
+        AND user_id = ?
+        LIMIT 1"
     );
 
     $check->execute([$list_id, $userId]);
