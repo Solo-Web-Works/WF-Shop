@@ -71,7 +71,7 @@ export function initItems() {
             return;
         }
 
-        filteredItems.forEach((item, index) => {
+		filteredItems.forEach((item, index) => {
             const li = document.createElement('li');
             li.setAttribute('role', 'option');
             li.setAttribute('tabindex', '-1');
@@ -89,12 +89,14 @@ export function initItems() {
                 li.classList.add('stripe');
             }
 
-            const addButton = document.createElement('button');
+			const addButton = document.createElement('button');
 
             addButton.textContent = 'Add';
             addButton.classList.add('button');
 
-            const alreadyInList = activeListSlugs && activeListSlugs.has(item.slug);
+			const slugsSet = (window.activeListSlugs instanceof Set) ? window.activeListSlugs : activeListSlugs;
+
+			const alreadyInList = slugsSet && slugsSet.has(item.slug);
 
             if (alreadyInList) {
                 addButton.disabled = true;
@@ -250,6 +252,9 @@ export function initItems() {
 	updateSearchUI();
 	categoryFilter.addEventListener('change', renderItems);
     fetchItems();
+
+	// Expose renderItems globally so other modules (e.g., lists) can trigger re-renders
+	window.renderItems = renderItems;
 
     // Keyboard shortcuts: '/' focuses search, 'Escape' clears it
     document.addEventListener('keydown', (e) => {

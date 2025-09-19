@@ -38,6 +38,9 @@ export function initLists() {
         }
     }
 
+    // Expose so other modules (e.g., auth) can trigger refresh on auth changes
+    window.fetchShoppingLists = fetchShoppingLists;
+
     function renderShoppingListTabs() {
         const savedId = window.getCookie('activeListId');
         const selectedId = (activeListId != null) ? activeListId : savedId;
@@ -130,6 +133,8 @@ export function initLists() {
             shoppingListContent.innerHTML = '';
             updatePriceWarning();
             activeListSlugs = new Set();
+            // Keep global in sync so items UI can reflect membership state
+            window.activeListSlugs = activeListSlugs;
             if (window.renderItems) window.renderItems();
             return;
         }
@@ -144,6 +149,8 @@ export function initLists() {
         const listItems = (await response.json()).sort((a, b) => a.name.localeCompare(b.name));
 
         activeListSlugs = new Set(listItems.map(i => i.slug).filter(Boolean));
+        // Keep global in sync so items UI can reflect membership state
+        window.activeListSlugs = activeListSlugs;
 
         let lastChecked = null;
 

@@ -370,5 +370,33 @@ export function initAuth() {
     window.renderUserAuthUI = renderUserAuthUI;
     window.checkSession = checkSession;
 
+    // Expose a UI update hook for other modules to toggle UI availability
+    function updateUIForAuthState() {
+        const isLoggedIn = !!(window.userSession && window.userSession.username);
+
+        // Toggle list controls based on auth state
+        const controls = [
+            document.getElementById('new-list-name'),
+            document.getElementById('create-list-btn'),
+            document.getElementById('check-prices-btn'),
+            document.getElementById('clear-list-btn'),
+            document.getElementById('delete-list-btn')
+        ];
+
+        controls.forEach(el => { if (el) el.disabled = !isLoggedIn; });
+
+        // If logged in, ensure lists are loaded and items UI reflects current list
+        if (isLoggedIn) {
+            if (typeof window.fetchShoppingLists === 'function') window.fetchShoppingLists();
+            if (typeof window.renderItems === 'function') window.renderItems();
+        } else {
+            // When logged out, clear any list-dependent UI hints in the catalog
+            window.activeListSlugs = new Set();
+            if (typeof window.renderItems === 'function') window.renderItems();
+        }
+    }
+
+    window.updateUIForAuthState = updateUIForAuthState;
+
     checkSession();
 }
