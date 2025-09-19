@@ -11,6 +11,12 @@ export function initItems() {
     let searchFocusIndex = -1;
     let searchPendingFocus = null; // { slug?, name? }
 
+	function updateSearchUI() {
+		if (!clearSearchBtn || !searchInput) return;
+		const hasValue = ((searchInput.value || '').trim().length > 0);
+		clearSearchBtn.style.display = hasValue ? '' : 'none';
+	}
+
     async function fetchItems() {
         const response = await fetch('api/get-items.php');
 
@@ -24,8 +30,9 @@ export function initItems() {
         populateCategories();
     }
 
-    function renderItems() {
-        const q = (searchInput?.value || '').trim();
+	function renderItems() {
+		const q = (searchInput?.value || '').trim();
+		updateSearchUI();
 
         if (q.length < 2) {
             itemList.innerHTML = '<li class="empty-hint">Type at least 2 characters to search</li>';
@@ -223,12 +230,14 @@ export function initItems() {
             searchInput.value = '';
             renderItems();
             searchInput.focus();
+			updateSearchUI();
         });
     }
 
     if (searchInput) {
         searchInput.addEventListener('input', () => {
-            renderItems();
+			updateSearchUI();
+			renderItems();
         });
 
         searchInput.setAttribute('role', 'combobox');
@@ -238,7 +247,8 @@ export function initItems() {
         searchInput.setAttribute('aria-expanded', 'false');
     }
 
-    categoryFilter.addEventListener('change', renderItems);
+	updateSearchUI();
+	categoryFilter.addEventListener('change', renderItems);
     fetchItems();
 
     // Keyboard shortcuts: '/' focuses search, 'Escape' clears it
@@ -253,12 +263,13 @@ export function initItems() {
             }
         }
         // Clear search with Escape
-        if (e.key === 'Escape') {
+			if (e.key === 'Escape') {
             if (searchInput && (searchInput.value || document.activeElement === searchInput)) {
                 e.preventDefault();
                 searchInput.value = '';
                 renderItems(); // Ensure results are cleared and empty hint is shown
                 searchInput.focus();
+					updateSearchUI();
             }
         }
     });
