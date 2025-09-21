@@ -31,10 +31,12 @@ if ($list_id) {
     $userId = $_SESSION['user_id'];
 
     // Check that the list belongs to the user
+
     $check = $pdo->prepare(
         "SELECT id FROM shopping_lists
         WHERE id = ?
-        AND user_id = ?"
+        AND user_id = ?
+        LIMIT 1"
     );
     $check->execute([$list_id, $userId]);
 
