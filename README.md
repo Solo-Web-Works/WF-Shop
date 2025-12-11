@@ -2,6 +2,8 @@
 
 Manage shopping lists of Warframe items, with real-time price checks from the Warframe Market API.
 
+![Screenshot of Warframe Shopping List](wf-list-screenshot.png)
+
 ## Features
 
 - Create and manage multiple shopping lists for Warframe items
